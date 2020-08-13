@@ -1,0 +1,340 @@
+#ifndef SOCKET_H_
+#define SOCKET_H_
+
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <poll.h>
+
+#include <vector>
+#include <memory>
+#include <unordered_map>
+#include <exception>
+#include <stdexcept>
+
+namespace c_wrapper
+{
+
+namespace socket
+{
+
+enum socket_type
+{
+	STREAM,  // TCP
+	DGRAM,  // UDP
+};
+
+enum protocol_family
+{
+	UNIX,  // PF_UNIX
+	INET,  // PF_INET
+};
+
+enum blocking_mode
+{
+	BLOCKING,
+	NON_BLOCKING,
+};
+
+class Poller;
+
+template< socket_type type >
+class Socket;
+
+template<>
+class Socket< socket_type::STREAM >
+{
+	private:
+	int socket_ = -1;
+	int server_socket_ = -1;
+	int client_socket_ = -1;
+
+	bool established_ = false;
+
+	blocking_mode mode_;
+
+	struct sockaddr_in server_socket_addr_;
+	struct sockaddr_in client_socket_addr_;
+
+	friend Poller;
+
+	int get() const
+	{
+		if( established_ )
+		{
+		    return (server_socket_!=-1)? server_socket_ : client_socket_;
+		}
+		else
+		{
+		    return socket_;
+		}
+	}
+
+	public:
+	Socket() = default;
+
+	Socket( const protocol_family protocol )
+	{
+		if( protocol == protocol_family::INET )
+		{
+			socket_ = ::socket( PF_INET, SOCK_STREAM, IPPROTO_TCP );
+		}
+		else
+		{
+			socket_ = ::socket( PF_UNIX, SOCK_STREAM, IPPROTO_TCP );
+		}
+
+		if( socket_ < 0 )
+		{
+			std::runtime_error( "Could not create socket" );
+		}
+
+		// 切断後すぐにソケットを再利用可能にするための設定
+		int yes = 1;
+		if( setsockopt(socket_, SOL_SOCKET, SO_REUSEADDR, (const char*)(&yes), sizeof(yes)) < 0 )
+		{
+			close( socket_ );
+			throw std::runtime_error( "setsockopt() failed" );
+		}
+	}
+
+	~Socket() noexcept
+	{
+		close( socket_ );
+		close( server_socket_ );
+		close( client_socket_ );
+	}
+
+	void change_mode( const blocking_mode mode )
+	{
+		if( mode == blocking_mode::NON_BLOCKING )
+		{
+			// ソケットをノンブロッキングモードに設定
+			u_long val = 1;
+			if( !established_ )
+			{
+				if( ioctl( socket_, FIONBIO, &val ) < 0 )
+				{
+					close( socket_ );
+					throw std::runtime_error( "ioctl() fialed" );
+				}
+			}
+			else
+			{
+				if( client_socket_ >= 0)
+				{
+					if( ioctl( client_socket_, FIONBIO, &val ) < 0 )
+					{
+						close( socket_ );
+						close( client_socket_ );
+						throw std::runtime_error( "ioctl() fialed" );
+					}
+				}
+				else
+				{
+					if( ioctl( server_socket_, FIONBIO, &val ) < 0 )
+					{
+						close( socket_ );
+						close( server_socket_ );
+						throw std::runtime_error( "ioctl() fialed" );
+					}
+				}
+			}
+		}
+		else
+		{
+			close( socket_ );
+			close( server_socket_ );
+			close( client_socket_ );
+			throw std::runtime_error( "Not implemented" );
+		}
+
+		mode_ = mode;
+	}
+
+	void bind( const uint16_t port )
+	{
+		std::memset( &server_socket_addr_, 0, sizeof(server_socket_addr_) );
+		server_socket_addr_.sin_family      = AF_INET;
+		server_socket_addr_.sin_addr.s_addr = htonl( INADDR_ANY );  // 後で接続元を制限すること
+		server_socket_addr_.sin_port        = htons( port );
+		
+		if( ::bind(socket_, (struct sockaddr*)(&server_socket_addr_), sizeof(server_socket_addr_) ) < 0 ) 
+		{
+			// 既に接続が確立しているポートでは bind が失敗する( Address already in use )
+			close( socket_ );
+			throw std::runtime_error( "bind() failed" );
+		}
+	}
+
+	void listen( const int backlog )
+	{
+		if( ::listen(socket_, backlog) < 0 )
+		{
+			close( socket_ );
+			throw std::runtime_error( "listen() failed" );
+		}
+	}
+
+	bool accept()
+	{
+		if( established_ )
+		{
+			return true;
+		}
+
+		unsigned int client_socket_length;
+		client_socket_ = ::accept( socket_, (struct sockaddr *)&client_socket_addr_, &client_socket_length );
+		if(( mode_==blocking_mode::BLOCKING ) && ( client_socket_<0 ))
+		{
+			close( socket_ );
+			throw std::runtime_error( "accept() failed" );
+		}
+
+		if( client_socket_ < 0 )
+		{
+			return false;
+		}
+
+		established_ = true;
+		server_socket_ = socket_;
+		return true;
+	}
+
+	bool connect( const char* ip_address, const uint16_t port )
+	{
+		if( established_ )
+		{
+			return true;
+		}
+
+		std::memset( &server_socket_addr_, 0, sizeof(server_socket_addr_) );
+		server_socket_addr_.sin_family = AF_INET;
+		server_socket_addr_.sin_port = htons( port );
+
+		if( inet_aton( ip_address, &server_socket_addr_.sin_addr ) == 0 )
+		{
+			close( socket_ );
+			throw std::runtime_error( "Invalid IP address" );
+		}
+
+		if( ::connect(socket_, (struct sockaddr*) &server_socket_addr_, sizeof(server_socket_addr_)) < 0 )
+		{
+			if( mode_ == blocking_mode::BLOCKING )
+			{
+				close( socket_ );
+				throw std::runtime_error( "connect() failed" );
+			}
+			return false;
+		}
+
+		// 切断後すぐにソケットを再利用可能にするための設定
+		int yes = 1;
+		if( setsockopt(socket_, SOL_SOCKET, SO_REUSEADDR, (const char*)(&yes), sizeof(yes)) < 0 )
+		{
+			close( socket_ );
+			throw std::runtime_error( "setsockopt() failed" );
+		}
+
+		established_ = true;
+		client_socket_ = socket_;
+		return true;
+	}
+
+};
+
+enum poll_event
+{
+	ERROR,
+	HUNG_UP,
+	IN,
+	OUT,
+};
+
+class Poller
+{
+	private:
+	const std::size_t max_num_of_fds_;
+	std::unique_ptr< pollfd[] > fds_;
+	std::unique_ptr< pollfd[] > results_;
+
+	unsigned int index_ = 0;
+	std::unordered_map< int, unsigned int > map_;  // fd, index
+	
+	public:
+	Poller( const std::size_t N )
+	: max_num_of_fds_( N ) 
+	, fds_( new pollfd[N] )
+	, results_( new pollfd[N] )
+	{
+		std::memset( &(fds_[0]), 0, sizeof(pollfd)*N );
+		std::memset( &(results_[0]), 0, sizeof(pollfd)*N );
+	}
+
+	void append( Socket<socket_type::STREAM>& socket )
+	{
+		if( index_ >= max_num_of_fds_ )
+		{
+			throw std::runtime_error( "Could not append fd to fds" );
+		}
+
+		fds_[index_].fd = socket.get();
+		fds_[index_].events = POLLERR | POLLHUP | POLLIN | POLLOUT;
+
+		map_[socket.get()] = index_;
+		index_ ++;
+	}
+
+	void append( Socket<socket_type::DGRAM>& socket )
+	{
+		throw std::runtime_error( "Not implemented" );
+		/*
+		if( ss_.size()+ds_.size() >= N )
+		{
+			throw std::runtime_error( "Could not append fd to fds" );
+		}
+
+		fds_[ss_.size()+ds_.size()].fd = socket.get();
+		fds_[ss_.size()+ds_.size()].events = POLLIN | POLLERR;
+
+		ds_.push_back( &socket );
+		*/
+	}
+
+	bool poll( const int timeout=-1 )
+	{
+		int ret = ::poll( fds_.get(), max_num_of_fds_, timeout );
+
+		std::memset( &(results_[0]), 0, sizeof(pollfd)*max_num_of_fds_ );
+		std::memcpy( results_.get(), fds_.get(), sizeof(pollfd)*max_num_of_fds_ );
+		std::memset( &(fds_[0]), 0, sizeof(pollfd)*max_num_of_fds_ );
+		index_ = 0;
+
+		// 実装できてない, retに応じて分岐
+		return false;
+	}
+
+	bool is_event_detected( Socket<socket_type::STREAM>& socket )
+	{
+		auto itr = map_.find( socket.get() );
+		if( itr == map_.end() )  // キーが存在しない
+		{
+			return false;
+		}
+
+		if( results_[ itr->second ].revents == 0 )  // イベントの発生なし
+		{
+			return false;
+		}
+
+		//map_.erase( itr );
+		return true;
+	}
+
+	
+};
+
+}
+}
+
+#endif
