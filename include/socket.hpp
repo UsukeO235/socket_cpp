@@ -361,7 +361,7 @@ class Poller
 		auto itr = map_.find( socket.get() );
 		if( itr == map_.end() )  // キーが存在しない
 		{
-			return false;
+			throw std::runtime_error( "Specified socket not registered" );
 		}
 
 		if( results_[ itr->second ].revents == 0 )  // イベントの発生なし
