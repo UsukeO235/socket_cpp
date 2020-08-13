@@ -29,7 +29,6 @@ SOFTWARE.
 #include <sys/ioctl.h>
 #include <poll.h>
 
-#include <vector>
 #include <memory>
 #include <unordered_map>
 #include <exception>
