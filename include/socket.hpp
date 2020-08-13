@@ -310,8 +310,11 @@ class Poller
 		std::memset( &(fds_[0]), 0, sizeof(pollfd)*max_num_of_fds_ );
 		index_ = 0;
 
-		// 実装できてない, retに応じて分岐
-		return false;
+		if( ret <= 0 )
+		{
+			return false;
+		}
+		return true;
 	}
 
 	bool is_event_detected( Socket<socket_type::STREAM>& socket )
