@@ -324,9 +324,25 @@ class Poller
 		*/
 	}
 
+	void remove( Socket<socket_type::STREAM>& socket )
+	{
+		auto itr = map_.find( socket.get() );
+		if( itr == map_.end() )  // キーが存在しない
+		{
+			throw std::runtime_error( "Specified socket not registered" );
+		}
+
+		// fds_の中から指定されたソケットを削除し、fds_を前方に詰める
+		// (1) fds_ = {5, x, 3}, index_==3, itr->second==1
+		// (2) fds_ = {5, 3}, index_==2, itr==NULL
+		std::memmove( fds_.get(), fds_.get()+(itr->second)+1, sizeof(pollfd)*(index_-(itr->second)-1) );
+		map_.erase( itr );
+		index_ --;
+	}
+
 	bool poll( const int timeout=-1 )
 	{
-		int ret = ::poll( fds_.get(), max_num_of_fds_, timeout );
+		int ret = ::poll( fds_.get(), index_, timeout );
 
 		std::memset( &(results_[0]), 0, sizeof(pollfd)*max_num_of_fds_ );
 		std::memcpy( results_.get(), fds_.get(), sizeof(pollfd)*max_num_of_fds_ );
