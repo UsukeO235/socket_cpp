@@ -48,10 +48,8 @@ int main()
 		
 		if( poller.is_event_detected( sock ) )
 		{
-			if( sock.accept() )
-			{
-				std::cout << "Succeeded !" << std::endl;
-			}
+			c_wrapper::socket::Socket< c_wrapper::socket::socket_type::STREAM > new_sock;
+			new_sock = sock.accept();
 		}
 		else
 		{

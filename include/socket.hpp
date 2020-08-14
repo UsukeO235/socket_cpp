@@ -68,9 +68,6 @@ class Socket< socket_type::STREAM >
 {
 	private:
 	int socket_ = -1;
-	int server_socket_ = -1;
-	int client_socket_ = -1;
-
 	bool established_ = false;
 
 	blocking_mode mode_;
@@ -82,14 +79,7 @@ class Socket< socket_type::STREAM >
 
 	int get() const
 	{
-		if( established_ )
-		{
-		    return (server_socket_!=-1)? server_socket_ : client_socket_;
-		}
-		else
-		{
-		    return socket_;
-		}
+		return socket_;
 	}
 
 	public:
@@ -122,9 +112,10 @@ class Socket< socket_type::STREAM >
 
 	~Socket() noexcept
 	{
-		close( socket_ );
-		close( server_socket_ );
-		close( client_socket_ );
+		if( socket_ != -1 )
+		{
+			close( socket_ );
+		}
 	}
 
 	void change_mode( const blocking_mode mode )
@@ -133,41 +124,15 @@ class Socket< socket_type::STREAM >
 		{
 			// ソケットをノンブロッキングモードに設定
 			u_long val = 1;
-			if( !established_ )
+			if( ioctl( socket_, FIONBIO, &val ) < 0 )
 			{
-				if( ioctl( socket_, FIONBIO, &val ) < 0 )
-				{
-					close( socket_ );
-					throw std::runtime_error( "ioctl() fialed" );
-				}
-			}
-			else
-			{
-				if( client_socket_ >= 0)
-				{
-					if( ioctl( client_socket_, FIONBIO, &val ) < 0 )
-					{
-						close( socket_ );
-						close( client_socket_ );
-						throw std::runtime_error( "ioctl() fialed" );
-					}
-				}
-				else
-				{
-					if( ioctl( server_socket_, FIONBIO, &val ) < 0 )
-					{
-						close( socket_ );
-						close( server_socket_ );
-						throw std::runtime_error( "ioctl() fialed" );
-					}
-				}
+				close( socket_ );
+				throw std::runtime_error( "ioctl() fialed" );
 			}
 		}
 		else
 		{
 			close( socket_ );
-			close( server_socket_ );
-			close( client_socket_ );
 			throw std::runtime_error( "Not implemented" );
 		}
 
@@ -198,29 +163,43 @@ class Socket< socket_type::STREAM >
 		}
 	}
 
-	bool accept()
+	Socket accept()
 	{
-		if( established_ )
-		{
-			return true;
-		}
-
+		/*
+		* -- non-blocking modeのときにacceptが失敗する可能性について --
+		* (1) accept失敗で例外を投げることの是非
+		* non-blocking modeにおいてacceptが失敗するのは例外ではないと考える
+		* 従って例外を投げるべきではない
+		* (2) accept()のインターフェース設計
+		* blocking mode、non-blocking modeともに同じインターフェースであるのが好ましい
+		* new_socket = accept()でクライアントと接続されたソケットを受け取りたい
+		* non-blocking modeでは以下のようにすればよい
+		* try{
+		*     poller.poll( 0 );  // タイムアウト値は0
+		*     if( poller.is_event_detected( socket ) ){  // socketはnon-blocking modeに設定されている
+		*         new_socket = socket.accept()
+		*     }
+		*     // new_socketを使ってクライアントと通信できる
+		* } catch(...){
+		*     // socketに対するイベントが発生しているにも関わらずacceptが失敗した
+		*     // これは例外的な状況と考える
+		*     // acceptが完了する前にクライアント側がソケットを閉じるとacceptに失敗する可能性はある
+		*     // 要調査
+		* }
+		* 
+		*/
+	
 		unsigned int client_socket_length;
-		client_socket_ = ::accept( socket_, (struct sockaddr *)&client_socket_addr_, &client_socket_length );
-		if(( mode_==blocking_mode::BLOCKING ) && ( client_socket_<0 ))
+		Socket< socket_type::STREAM > s;
+		s.socket_ = ::accept( socket_, (struct sockaddr *)&s.client_socket_addr_, &client_socket_length );
+		if( s.socket_ < 0 )
 		{
 			close( socket_ );
 			throw std::runtime_error( "accept() failed" );
 		}
 
-		if( client_socket_ < 0 )
-		{
-			return false;
-		}
-
-		established_ = true;
-		server_socket_ = socket_;
-		return true;
+		s.established_ = true;
+		return s;
 	}
 
 	bool connect( const char* ip_address, const uint16_t port )
@@ -259,7 +238,6 @@ class Socket< socket_type::STREAM >
 		}
 
 		established_ = true;
-		client_socket_ = socket_;
 		return true;
 	}
 
@@ -293,7 +271,7 @@ class Poller
 		std::memset( &(results_[0]), 0, sizeof(pollfd)*N );
 	}
 
-	void append( Socket<socket_type::STREAM>& socket )
+	void append( const Socket<socket_type::STREAM>& socket )
 	{
 		if( index_ >= max_num_of_fds_ )
 		{
@@ -307,7 +285,7 @@ class Poller
 		index_ ++;
 	}
 
-	void append( Socket<socket_type::DGRAM>& socket )
+	void append( const Socket<socket_type::DGRAM>& socket )
 	{
 		throw std::runtime_error( "Not implemented" );
 		/*
@@ -323,7 +301,7 @@ class Poller
 		*/
 	}
 
-	void remove( Socket<socket_type::STREAM>& socket )
+	void remove( const Socket<socket_type::STREAM>& socket )
 	{
 		auto itr = map_.find( socket.get() );
 		if( itr == map_.end() )  // キーが存在しない
@@ -355,7 +333,7 @@ class Poller
 		return true;
 	}
 
-	bool is_event_detected( Socket<socket_type::STREAM>& socket )
+	bool is_event_detected( const Socket<socket_type::STREAM>& socket )
 	{
 		auto itr = map_.find( socket.get() );
 		if( itr == map_.end() )  // キーが存在しない
