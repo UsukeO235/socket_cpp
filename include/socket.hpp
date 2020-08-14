@@ -121,8 +121,14 @@ class Socket< socket_type::STREAM >
 
 	~Socket() noexcept
 	{
-		close( socket_ );
-		close( client_socket_ );
+		if( socket_ != -1 )
+		{
+			close( socket_ );
+		}
+		if( client_socket_ != -1 )
+		{
+			close( client_socket_ );
+		}
 	}
 
 	void change_mode( const blocking_mode mode )
