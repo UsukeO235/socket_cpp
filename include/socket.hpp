@@ -271,7 +271,7 @@ class Poller
 		std::memset( &(results_[0]), 0, sizeof(pollfd)*N );
 	}
 
-	void append( Socket<socket_type::STREAM>& socket )
+	void append( const Socket<socket_type::STREAM>& socket )
 	{
 		if( index_ >= max_num_of_fds_ )
 		{
@@ -285,7 +285,7 @@ class Poller
 		index_ ++;
 	}
 
-	void append( Socket<socket_type::DGRAM>& socket )
+	void append( const Socket<socket_type::DGRAM>& socket )
 	{
 		throw std::runtime_error( "Not implemented" );
 		/*
@@ -301,7 +301,7 @@ class Poller
 		*/
 	}
 
-	void remove( Socket<socket_type::STREAM>& socket )
+	void remove( const Socket<socket_type::STREAM>& socket )
 	{
 		auto itr = map_.find( socket.get() );
 		if( itr == map_.end() )  // キーが存在しない
@@ -333,7 +333,7 @@ class Poller
 		return true;
 	}
 
-	bool is_event_detected( Socket<socket_type::STREAM>& socket )
+	bool is_event_detected( const Socket<socket_type::STREAM>& socket )
 	{
 		auto itr = map_.find( socket.get() );
 		if( itr == map_.end() )  // キーが存在しない
