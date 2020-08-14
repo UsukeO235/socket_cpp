@@ -68,8 +68,6 @@ class Socket< socket_type::STREAM >
 {
 	private:
 	int socket_ = -1;
-	int client_socket_ = -1;
-
 	bool established_ = false;
 
 	blocking_mode mode_;
@@ -81,14 +79,7 @@ class Socket< socket_type::STREAM >
 
 	int get() const
 	{
-		if( established_ )
-		{
-		    return (client_socket_==-1)? socket_ : client_socket_;
-		}
-		else
-		{
-		    return socket_;
-		}
+		return socket_;
 	}
 
 	public:
@@ -125,10 +116,6 @@ class Socket< socket_type::STREAM >
 		{
 			close( socket_ );
 		}
-		if( client_socket_ != -1 )
-		{
-			close( client_socket_ );
-		}
 	}
 
 	void change_mode( const blocking_mode mode )
@@ -137,39 +124,15 @@ class Socket< socket_type::STREAM >
 		{
 			// ソケットをノンブロッキングモードに設定
 			u_long val = 1;
-			if( !established_ )
+			if( ioctl( socket_, FIONBIO, &val ) < 0 )
 			{
-				if( ioctl( socket_, FIONBIO, &val ) < 0 )
-				{
-					close( socket_ );
-					throw std::runtime_error( "ioctl() fialed" );
-				}
-			}
-			else
-			{
-				if( client_socket_ >= 0)
-				{
-					if( ioctl( client_socket_, FIONBIO, &val ) < 0 )
-					{
-						close( socket_ );
-						close( client_socket_ );
-						throw std::runtime_error( "ioctl() fialed" );
-					}
-				}
-				else
-				{
-					if( ioctl( socket_, FIONBIO, &val ) < 0 )
-					{
-						close( socket_ );
-						throw std::runtime_error( "ioctl() fialed" );
-					}
-				}
+				close( socket_ );
+				throw std::runtime_error( "ioctl() fialed" );
 			}
 		}
 		else
 		{
 			close( socket_ );
-			close( client_socket_ );
 			throw std::runtime_error( "Not implemented" );
 		}
 
@@ -227,15 +190,16 @@ class Socket< socket_type::STREAM >
 		*/
 	
 		unsigned int client_socket_length;
-		client_socket_ = ::accept( socket_, (struct sockaddr *)&client_socket_addr_, &client_socket_length );
-		if( client_socket_<0 )
+		Socket< socket_type::STREAM > s;
+		s.socket_ = ::accept( socket_, (struct sockaddr *)&s.client_socket_addr_, &client_socket_length );
+		if( s.socket_ < 0 )
 		{
 			close( socket_ );
 			throw std::runtime_error( "accept() failed" );
 		}
 
-		established_ = true;
-		return *this;
+		s.established_ = true;
+		return s;
 	}
 
 	bool connect( const char* ip_address, const uint16_t port )
@@ -274,7 +238,6 @@ class Socket< socket_type::STREAM >
 		}
 
 		established_ = true;
-		client_socket_ = socket_;
 		return true;
 	}
 
