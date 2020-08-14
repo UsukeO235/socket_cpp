@@ -68,7 +68,6 @@ class Socket< socket_type::STREAM >
 {
 	private:
 	int socket_ = -1;
-	int server_socket_ = -1;
 	int client_socket_ = -1;
 
 	bool established_ = false;
@@ -84,7 +83,7 @@ class Socket< socket_type::STREAM >
 	{
 		if( established_ )
 		{
-		    return (server_socket_!=-1)? server_socket_ : client_socket_;
+		    return (client_socket_==-1)? socket_ : client_socket_;
 		}
 		else
 		{
@@ -123,7 +122,6 @@ class Socket< socket_type::STREAM >
 	~Socket() noexcept
 	{
 		close( socket_ );
-		close( server_socket_ );
 		close( client_socket_ );
 	}
 
@@ -154,10 +152,9 @@ class Socket< socket_type::STREAM >
 				}
 				else
 				{
-					if( ioctl( server_socket_, FIONBIO, &val ) < 0 )
+					if( ioctl( socket_, FIONBIO, &val ) < 0 )
 					{
 						close( socket_ );
-						close( server_socket_ );
 						throw std::runtime_error( "ioctl() fialed" );
 					}
 				}
@@ -166,7 +163,6 @@ class Socket< socket_type::STREAM >
 		else
 		{
 			close( socket_ );
-			close( server_socket_ );
 			close( client_socket_ );
 			throw std::runtime_error( "Not implemented" );
 		}
@@ -222,7 +218,6 @@ class Socket< socket_type::STREAM >
 		*     // 要調査
 		* }
 		* 
-
 		*/
 	
 		unsigned int client_socket_length;
@@ -234,7 +229,6 @@ class Socket< socket_type::STREAM >
 		}
 
 		established_ = true;
-		server_socket_ = socket_;
 		return *this;
 	}
 
