@@ -222,7 +222,7 @@ class Socket< socket_type::STREAM >
 	
 		unsigned int client_socket_length;
 		client_socket_ = ::accept( socket_, (struct sockaddr *)&client_socket_addr_, &client_socket_length );
-		if(( mode_==blocking_mode::BLOCKING ) && ( client_socket_<0 ))
+		if( client_socket_<0 )
 		{
 			close( socket_ );
 			throw std::runtime_error( "accept() failed" );
