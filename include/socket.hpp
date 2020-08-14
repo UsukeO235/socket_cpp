@@ -198,13 +198,33 @@ class Socket< socket_type::STREAM >
 		}
 	}
 
-	bool accept()
+	Socket accept()
 	{
-		if( established_ )
-		{
-			return true;
-		}
+		/*
+		* -- non-blocking modeのときにacceptが失敗する可能性について --
+		* (1) accept失敗で例外を投げることの是非
+		* non-blocking modeにおいてacceptが失敗するのは例外ではないと考える
+		* 従って例外を投げるべきではない
+		* (2) accept()のインターフェース設計
+		* blocking mode、non-blocking modeともに同じインターフェースであるのが好ましい
+		* new_socket = accept()でクライアントと接続されたソケットを受け取りたい
+		* non-blocking modeでは以下のようにすればよい
+		* try{
+		*     poller.poll( 0 );  // タイムアウト値は0
+		*     if( poller.is_event_detected( socket ) ){  // socketはnon-blocking modeに設定されている
+		*         new_socket = socket.accept()
+		*     }
+		*     // new_socketを使ってクライアントと通信できる
+		* } catch(...){
+		*     // socketに対するイベントが発生しているにも関わらずacceptが失敗した
+		*     // これは例外的な状況と考える
+		*     // acceptが完了する前にクライアント側がソケットを閉じるとacceptに失敗する可能性はある
+		*     // 要調査
+		* }
+		* 
 
+		*/
+	
 		unsigned int client_socket_length;
 		client_socket_ = ::accept( socket_, (struct sockaddr *)&client_socket_addr_, &client_socket_length );
 		if(( mode_==blocking_mode::BLOCKING ) && ( client_socket_<0 ))
@@ -213,14 +233,9 @@ class Socket< socket_type::STREAM >
 			throw std::runtime_error( "accept() failed" );
 		}
 
-		if( client_socket_ < 0 )
-		{
-			return false;
-		}
-
 		established_ = true;
 		server_socket_ = socket_;
-		return true;
+		return *this;
 	}
 
 	bool connect( const char* ip_address, const uint16_t port )
