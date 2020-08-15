@@ -84,6 +84,8 @@ class Socket< socket_type::STREAM >
 
 	public:
 	Socket() = default;
+	Socket( const Socket& ) = delete;
+	Socket& operator=( const Socket& ) = delete;
 
 	Socket( const protocol_family protocol )
 	{
@@ -108,6 +110,44 @@ class Socket< socket_type::STREAM >
 			close( socket_ );
 			throw std::runtime_error( "setsockopt() failed" );
 		}
+	}
+
+	/**
+	 * @brief Construct a new Socket object
+	 * 
+	 * @param rhs ムーブ元
+	 */
+	Socket( Socket&& rhs )
+	: socket_( rhs.socket_ )
+	, established_( rhs.established_ )
+	, mode_( rhs.mode_ )
+	, server_socket_addr_( rhs.server_socket_addr_ )
+	, client_socket_addr_( rhs.client_socket_addr_ )
+	{
+		rhs.socket_ = -1;
+		rhs.established_ = false;
+	}
+
+	/**
+	 * @brief ムーブ代入演算子
+	 * 
+	 * @param rhs ムーブ元
+	 * @return Socket& ソケット(ムーブ先)
+	 */
+	Socket& operator=( Socket&& rhs )
+	{
+		if( this != &rhs )
+		{
+			socket_ = rhs.socket_;
+			established_ = rhs.established_;
+			mode_ = rhs.mode_;
+			server_socket_addr_ = rhs.server_socket_addr_;
+			client_socket_addr_ = rhs.client_socket_addr_;
+			
+			rhs.socket_ = -1;
+			rhs.established_ = false;
+		}
+		return *this;
 	}
 
 	~Socket() noexcept
@@ -199,7 +239,7 @@ class Socket< socket_type::STREAM >
 		}
 
 		s.established_ = true;
-		return s;
+		return std::move(s);
 	}
 
 	bool connect( const char* ip_address, const uint16_t port )
