@@ -16,3 +16,11 @@ add_executable( server
 add_executable( client
 	examples/polling/client.cpp
 )
+
+add_executable( chat_server
+	examples/chat/chat_server.cpp
+)
+
+add_executable( chat_client
+	examples/chat/chat_client.cpp
+)
