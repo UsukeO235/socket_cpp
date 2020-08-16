@@ -38,6 +38,9 @@ int main()
 	{
 		c_wrapper::socket::Socket< c_wrapper::socket::socket_type::STREAM > sock( c_wrapper::socket::protocol_family::INET );
 		sock.connect( "127.0.0.1", 50000 );
+
+		const char s[] = "This is Client.";
+		std::cout << sock.send( s, sizeof(s) ) << " bytes sent" << std::endl;
 	}
 	catch(const std::exception& e)
 	{

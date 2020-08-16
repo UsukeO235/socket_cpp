@@ -70,7 +70,7 @@ class Socket< socket_type::STREAM >
 	int socket_ = -1;
 	bool established_ = false;
 
-	blocking_mode mode_;
+	blocking_mode mode_ = blocking_mode::BLOCKING;
 
 	struct sockaddr_in server_socket_addr_;
 	struct sockaddr_in client_socket_addr_;
@@ -279,6 +279,16 @@ class Socket< socket_type::STREAM >
 
 		established_ = true;
 		return true;
+	}
+
+	int receive( void* const buffer, const std::size_t size )
+	{
+		return ::recv( socket_, buffer, size, 0 );
+	}
+
+	int send( const void* const buffer, const std::size_t size )
+	{
+		return ::send( socket_, buffer, size, 0 );
 	}
 
 };

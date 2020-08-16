@@ -50,6 +50,10 @@ int main()
 		{
 			c_wrapper::socket::Socket< c_wrapper::socket::socket_type::STREAM > new_sock;
 			new_sock = sock.accept();
+
+			char s[256] = {};
+			std::cout << new_sock.receive( s, 256 ) << " bytes received. ";
+			std::cout << "Received message: " << s << std::endl;
 		}
 		else
 		{
