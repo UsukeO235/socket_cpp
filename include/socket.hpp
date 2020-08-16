@@ -281,6 +281,16 @@ class Socket< socket_type::STREAM >
 		return true;
 	}
 
+	int receive( void* const buffer, const std::size_t size )
+	{
+		return ::recv( socket_, buffer, size, 0 );
+	}
+
+	int send( const void* const buffer, const std::size_t size )
+	{
+		return ::send( socket_, buffer, size, 0 );
+	}
+
 };
 
 enum poll_event
