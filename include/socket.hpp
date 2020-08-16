@@ -28,9 +28,10 @@ SOFTWARE.
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <poll.h>
-
+#include <unistd.h>
 #include <memory>
 #include <unordered_map>
+#include <cstring>
 #include <exception>
 #include <stdexcept>
 
