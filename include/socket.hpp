@@ -70,7 +70,7 @@ class Socket< socket_type::STREAM >
 	int socket_ = -1;
 	bool established_ = false;
 
-	blocking_mode mode_;
+	blocking_mode mode_ = blocking_mode::BLOCKING;
 
 	struct sockaddr_in server_socket_addr_;
 	struct sockaddr_in client_socket_addr_;
