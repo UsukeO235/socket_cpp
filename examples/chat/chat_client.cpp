@@ -29,7 +29,11 @@ int main()
 {
 	try
 	{
+		c_wrapper::socket::Socket< c_wrapper::socket::socket_type::STREAM > socket( c_wrapper::socket::protocol_family::INET );
 		
+		socket.connect( "127.0.0.1", 50000 );
+
+		sleep(2);
 	}
 	catch( const std::exception& e )
 	{

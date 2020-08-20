@@ -24,12 +24,65 @@ SOFTWARE.
 
 #include "socket.hpp"
 #include <iostream>
+#include <vector>
+#include <stdlib.h>
+#include <signal.h>
+
+volatile sig_atomic_t running = true;
+
+void handler( int )
+{
+	running = false;
+}
 
 int main()
 {
 	try
 	{
-		
+		c_wrapper::socket::Socket< c_wrapper::socket::socket_type::STREAM > producer( c_wrapper::socket::protocol_family::INET );
+		std::vector<c_wrapper::socket::Socket< c_wrapper::socket::socket_type::STREAM >> sockets;
+		sockets.reserve(4);
+
+		c_wrapper::socket::Poller poller(5);
+
+		struct sigaction action = {};
+		action.sa_handler = handler;
+		sigaction( SIGINT, &action, NULL );
+
+		producer.bind( 50000 );
+		producer.listen( 5 );
+
+		poller.append( producer );
+
+		while( running )
+		{
+			if( poller.poll() )
+			{
+				if( poller.is_event_detected( producer ) )
+				{
+					if( sockets.size() < 4 )
+					{
+						std::cout << "New socket created" << std::endl;
+						sockets.push_back( producer.accept() );
+						poller.append( sockets.back() );
+					}
+				}
+
+				for( auto itr = sockets.begin(); itr != sockets.end(); ++ itr )
+				{
+					if( poller.is_event_detected( *itr ) )
+					{
+
+					}
+				}
+			}
+			else
+			{
+				std::cout << "poll() returned false" << std::endl;
+			}	
+		}
+
+		std::cout << "Aborted" << std::endl;
 	}
 	catch( const std::exception& e )
 	{
