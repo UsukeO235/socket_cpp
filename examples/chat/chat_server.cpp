@@ -58,6 +58,14 @@ int main()
 		{
 			if( poller.poll() )
 			{
+				for( auto itr = sockets.begin(); itr != sockets.end(); ++ itr )
+				{
+					if( poller.is_event_detected( *itr ) )
+					{
+						std::cout << "Event detected on comm socket: " << static_cast<int>(poller.event_detected(*itr)) << std::endl;
+					}
+				}
+
 				if( poller.is_event_detected( producer ) )
 				{
 					std::cout << static_cast<int>(poller.event_detected(producer)) << std::endl;
@@ -66,15 +74,7 @@ int main()
 					{
 						std::cout << "New socket created" << std::endl;
 						sockets.push_back( producer.accept() );
-						poller.append( sockets.back(), c_wrapper::socket::poll_event::IN );
-					}
-				}
-
-				for( auto itr = sockets.begin(); itr != sockets.end(); ++ itr )
-				{
-					if( poller.is_event_detected( *itr ) )
-					{
-
+						poller.append( sockets.back(), c_wrapper::socket::poll_event::IN | c_wrapper::socket::poll_event::HUNG_UP );
 					}
 				}
 			}
