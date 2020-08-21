@@ -52,7 +52,7 @@ int main()
 		producer.bind( 50000 );
 		producer.listen( 5 );
 
-		poller.append( producer );
+		poller.append( producer, c_wrapper::socket::poll_event::IN );
 
 		while( running )
 		{
@@ -66,7 +66,7 @@ int main()
 					{
 						std::cout << "New socket created" << std::endl;
 						sockets.push_back( producer.accept() );
-						poller.append( sockets.back() );
+						poller.append( sockets.back(), c_wrapper::socket::poll_event::IN );
 					}
 				}
 
