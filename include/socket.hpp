@@ -334,7 +334,7 @@ class Poller
 		std::memset( &(results_[0]), 0, sizeof(pollfd)*N );
 	}
 
-	void append( const Socket<socket_type::STREAM>& socket )
+	void append( const Socket<socket_type::STREAM>& socket, const poll_event events )
 	{
 		if( index_ >= max_num_of_fds_ )
 		{
@@ -342,7 +342,7 @@ class Poller
 		}
 
 		fds_[index_].fd = socket.get();
-		fds_[index_].events = POLLERR | POLLHUP | POLLIN | POLLOUT;
+		fds_[index_].events = static_cast<int>(events);
 
 		map_[socket.get()] = index_;
 		index_ ++;
