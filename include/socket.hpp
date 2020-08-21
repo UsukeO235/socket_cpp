@@ -118,7 +118,7 @@ class Socket< socket_type::STREAM >
 	 * 
 	 * @param rhs ムーブ元
 	 */
-	Socket( Socket&& rhs )
+	Socket( Socket&& rhs ) noexcept
 	: socket_( rhs.socket_ )
 	, established_( rhs.established_ )
 	, mode_( rhs.mode_ )
@@ -135,7 +135,7 @@ class Socket< socket_type::STREAM >
 	 * @param rhs ムーブ元
 	 * @return Socket& ソケット(ムーブ先)
 	 */
-	Socket& operator=( Socket&& rhs )
+	Socket& operator=( Socket&& rhs ) noexcept
 	{
 		if( this != &rhs )
 		{
