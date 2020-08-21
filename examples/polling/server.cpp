@@ -43,7 +43,7 @@ int main()
 
 		c_wrapper::socket::Poller poller(2);
 
-		poller.append( sock );
+		poller.append( sock, c_wrapper::socket::poll_event::IN );
 		poller.poll( -1 );
 		
 		if( poller.is_event_detected( sock ) )
