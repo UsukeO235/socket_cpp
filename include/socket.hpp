@@ -294,13 +294,25 @@ class Socket< socket_type::STREAM >
 
 };
 
-enum poll_event
+enum class poll_event
+: int
 {
-	ERROR,
-	HUNG_UP,
-	IN,
-	OUT,
+	NONE = 0,
+	ERROR = POLLERR,
+	HUNG_UP = POLLHUP,
+	IN = POLLIN,
+	OUT = POLLOUT
 };
+
+constexpr poll_event operator | ( poll_event a, poll_event b )
+{
+	return static_cast<poll_event>( static_cast<int>(a) | static_cast<int>(b) );
+}
+
+constexpr poll_event operator & ( poll_event a, poll_event b )
+{
+	return static_cast<poll_event>( static_cast<int>(a) & static_cast<int>(b) );
+}
 
 class Poller
 {
@@ -401,6 +413,16 @@ class Poller
 		return true;
 	}
 
+	poll_event event_detected( const Socket<socket_type::STREAM>& socket )
+	{
+		auto itr = map_.find( socket.get() );
+		if( itr == map_.end() )  // キーが存在しない
+		{
+			throw std::runtime_error( "Specified socket not registered" );
+		}
+
+		return static_cast<poll_event>( results_[ itr->second ].revents );
+	}
 	
 };
 
