@@ -60,6 +60,8 @@ int main()
 			{
 				if( poller.is_event_detected( producer ) )
 				{
+					std::cout << static_cast<int>(poller.event_detected(producer)) << std::endl;
+					
 					if( sockets.size() < 4 )
 					{
 						std::cout << "New socket created" << std::endl;
