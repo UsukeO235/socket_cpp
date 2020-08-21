@@ -350,6 +350,38 @@ class Socket< socket_type::STREAM >
 
 };
 
+class PollerException
+: public std::runtime_error
+{
+	public:
+	PollerException( const char* message )
+	: std::runtime_error( message ){}
+};
+
+class PollerAppendFailedException
+: public PollerException
+{
+	public:
+	PollerAppendFailedException( const char* message )
+	: PollerException( message ){}
+};
+
+class PollerRemoveFailedException
+: public PollerException
+{
+	public:
+	PollerRemoveFailedException( const char* message )
+	: PollerException( message ){}
+};
+
+class PollerEventDetectionFailedException
+: public PollerException
+{
+	public:
+	PollerEventDetectionFailedException( const char* message )
+	: PollerException( message ){}
+};
+
 enum class poll_event
 : int
 {
@@ -394,7 +426,7 @@ class Poller
 	{
 		if( index_ >= max_num_of_fds_ )
 		{
-			throw std::runtime_error( "Could not append fd to fds" );
+			throw PollerAppendFailedException( "Could not append fd to fds" );
 		}
 
 		fds_[index_].fd = socket.get();
@@ -425,7 +457,7 @@ class Poller
 		auto itr = map_.find( socket.get() );
 		if( itr == map_.end() )  // キーが存在しない
 		{
-			throw std::runtime_error( "Specified socket not registered" );
+			throw PollerRemoveFailedException( "Specified socket not registered" );
 		}
 
 		// fds_の中から指定されたソケットを削除し、fds_を前方に詰める
@@ -457,7 +489,7 @@ class Poller
 		auto itr = map_.find( socket.get() );
 		if( itr == map_.end() )  // キーが存在しない
 		{
-			throw std::runtime_error( "Specified socket not registered" );
+			throw PollerEventDetectionFailedException( "Specified socket not registered" );
 		}
 
 		if( results_[ itr->second ].revents == 0 )  // イベントの発生なし
@@ -474,7 +506,7 @@ class Poller
 		auto itr = map_.find( socket.get() );
 		if( itr == map_.end() )  // キーが存在しない
 		{
-			throw std::runtime_error( "Specified socket not registered" );
+			throw PollerEventDetectionFailedException( "Specified socket not registered" );
 		}
 
 		return static_cast<poll_event>( results_[ itr->second ].revents );
