@@ -296,10 +296,20 @@ class Socket< socket_type::STREAM >
 
 enum poll_event
 {
+	NONE = 0,
 	ERROR,
 	HUNG_UP,
 	IN,
 	OUT,
+};
+
+const int poll_event_map[5]=
+{
+	0x00,
+	POLLERR,
+	POLLHUP,
+	POLLIN,
+	POLLOUT
 };
 
 class Poller
@@ -401,6 +411,24 @@ class Poller
 		return true;
 	}
 
+	poll_event event_detected( const Socket<socket_type::STREAM>& socket )
+	{
+		auto itr = map_.find( socket.get() );
+		if( itr == map_.end() )  // キーが存在しない
+		{
+			throw std::runtime_error( "Specified socket not registered" );
+		}
+
+		for( unsigned int i = 0; i < 5; i ++ )
+		{
+			if( results_[ itr->second ].revents == poll_event_map[i] )  // イベントの発生なし
+			{
+				return static_cast<poll_event>(i);
+			}
+		}
+
+		return poll_event::NONE;
+	}
 	
 };
 
