@@ -41,6 +41,62 @@ namespace c_wrapper
 namespace socket
 {
 
+class SocketException
+: public std::runtime_error
+{
+	public:
+	SocketException( const char* message )
+	: std::runtime_error( message ){}
+};
+
+class SocketInitializationFailedException
+: public SocketException
+{
+	public:
+	SocketInitializationFailedException( const char* message )
+	: SocketException( message ){}
+};
+
+class SocketAcceptFailedException
+: public SocketException
+{
+	public:
+	SocketAcceptFailedException( const char* message )
+	: SocketException( message ){}
+};
+
+class SocketConnectFailedException
+: public SocketException
+{
+	public:
+	SocketConnectFailedException( const char* message )
+	: SocketException( message ){}
+};
+
+class SocketBindFailedException
+: public SocketException
+{
+	public:
+	SocketBindFailedException( const char* message )
+	: SocketException( message ){}
+};
+
+class SocketListenFailedException
+: public SocketException
+{
+	public:
+	SocketListenFailedException( const char* message )
+	: SocketException( message ){}
+};
+
+class SocketModeChangeFailedException
+: public SocketException
+{
+	public:
+	SocketModeChangeFailedException( const char* message )
+	: SocketException( message ){}
+};
+
 enum socket_type
 {
 	STREAM,  // TCP
@@ -101,7 +157,7 @@ class Socket< socket_type::STREAM >
 
 		if( socket_ < 0 )
 		{
-			std::runtime_error( "Could not create socket" );
+			throw SocketInitializationFailedException( "Could not create socket" );
 		}
 
 		// 切断後すぐにソケットを再利用可能にするための設定
@@ -109,7 +165,7 @@ class Socket< socket_type::STREAM >
 		if( setsockopt(socket_, SOL_SOCKET, SO_REUSEADDR, (const char*)(&yes), sizeof(yes)) < 0 )
 		{
 			close( socket_ );
-			throw std::runtime_error( "setsockopt() failed" );
+			throw SocketInitializationFailedException( "setsockopt() failed" );
 		}
 	}
 
@@ -168,7 +224,7 @@ class Socket< socket_type::STREAM >
 			if( ioctl( socket_, FIONBIO, &val ) < 0 )
 			{
 				close( socket_ );
-				throw std::runtime_error( "ioctl() fialed" );
+				throw SocketModeChangeFailedException( "ioctl() fialed" );
 			}
 		}
 		else
@@ -191,7 +247,7 @@ class Socket< socket_type::STREAM >
 		{
 			// 既に接続が確立しているポートでは bind が失敗する( Address already in use )
 			close( socket_ );
-			throw std::runtime_error( "bind() failed" );
+			throw SocketBindFailedException( "bind() failed" );
 		}
 	}
 
@@ -200,7 +256,7 @@ class Socket< socket_type::STREAM >
 		if( ::listen(socket_, backlog) < 0 )
 		{
 			close( socket_ );
-			throw std::runtime_error( "listen() failed" );
+			throw SocketListenFailedException( "listen() failed" );
 		}
 	}
 
@@ -236,7 +292,7 @@ class Socket< socket_type::STREAM >
 		if( s.socket_ < 0 )
 		{
 			close( socket_ );
-			throw std::runtime_error( "accept() failed" );
+			throw SocketAcceptFailedException( "accept() failed" );
 		}
 
 		s.established_ = true;
@@ -257,7 +313,7 @@ class Socket< socket_type::STREAM >
 		if( inet_aton( ip_address, &server_socket_addr_.sin_addr ) == 0 )
 		{
 			close( socket_ );
-			throw std::runtime_error( "Invalid IP address" );
+			throw SocketConnectFailedException( "Invalid IP address" );
 		}
 
 		if( ::connect(socket_, (struct sockaddr*) &server_socket_addr_, sizeof(server_socket_addr_)) < 0 )
@@ -265,7 +321,7 @@ class Socket< socket_type::STREAM >
 			if( mode_ == blocking_mode::BLOCKING )
 			{
 				close( socket_ );
-				throw std::runtime_error( "connect() failed" );
+				throw SocketConnectFailedException( "connect() failed" );
 			}
 			return false;
 		}
@@ -275,7 +331,7 @@ class Socket< socket_type::STREAM >
 		if( setsockopt(socket_, SOL_SOCKET, SO_REUSEADDR, (const char*)(&yes), sizeof(yes)) < 0 )
 		{
 			close( socket_ );
-			throw std::runtime_error( "setsockopt() failed" );
+			throw SocketConnectFailedException( "setsockopt() failed" );
 		}
 
 		established_ = true;
