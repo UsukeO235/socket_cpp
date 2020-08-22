@@ -130,6 +130,7 @@ class Socket< socket_type::STREAM >
 	int socket_ = -1;
 	bool established_ = false;
 
+	protocol_family protocol_ = protocol_family::INET;
 	blocking_mode mode_ = blocking_mode::BLOCKING;
 
 	struct sockaddr_in server_socket_addr_;
@@ -149,7 +150,8 @@ class Socket< socket_type::STREAM >
 
 	Socket( const protocol_family protocol )
 	{
-		socket_ = ::socket( static_cast<int>(protocol), SOCK_STREAM, IPPROTO_TCP );
+		protocol_ = protocol;
+		socket_ = ::socket( static_cast<int>(protocol_), SOCK_STREAM, IPPROTO_TCP );
 
 		if( socket_ < 0 )
 		{
@@ -172,6 +174,7 @@ class Socket< socket_type::STREAM >
 	Socket( Socket&& rhs ) noexcept
 	: socket_( rhs.socket_ )
 	, established_( rhs.established_ )
+	, protocol_( rhs.protocol_ )
 	, mode_( rhs.mode_ )
 	, server_socket_addr_( rhs.server_socket_addr_ )
 	, client_socket_addr_( rhs.client_socket_addr_ )
@@ -192,6 +195,7 @@ class Socket< socket_type::STREAM >
 		{
 			socket_ = rhs.socket_;
 			established_ = rhs.established_;
+			protocol_ = rhs.protocol_;
 			mode_ = rhs.mode_;
 			server_socket_addr_ = rhs.server_socket_addr_;
 			client_socket_addr_ = rhs.client_socket_addr_;
@@ -224,7 +228,7 @@ class Socket< socket_type::STREAM >
 	void bind( const uint16_t port )
 	{
 		std::memset( &server_socket_addr_, 0, sizeof(server_socket_addr_) );
-		server_socket_addr_.sin_family      = AF_INET;
+		server_socket_addr_.sin_family      = static_cast<int>(protocol_);
 		server_socket_addr_.sin_addr.s_addr = htonl( INADDR_ANY );  // 後で接続元を制限すること
 		server_socket_addr_.sin_port        = htons( port );
 		
@@ -289,7 +293,7 @@ class Socket< socket_type::STREAM >
 		}
 
 		std::memset( &server_socket_addr_, 0, sizeof(server_socket_addr_) );
-		server_socket_addr_.sin_family = AF_INET;
+		server_socket_addr_.sin_family = static_cast<int>(protocol_);
 		server_socket_addr_.sin_port = htons( port );
 
 		if( inet_aton( ip_address, &server_socket_addr_.sin_addr ) == 0 )
