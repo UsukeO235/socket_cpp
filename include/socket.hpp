@@ -97,22 +97,25 @@ class SocketModeChangeFailedException
 	: SocketException( message ){}
 };
 
-enum socket_type
+enum class socket_type
+: int
 {
-	STREAM,  // TCP
-	DGRAM,  // UDP
+	STREAM  = SOCK_STREAM,
+	DGRAM = SOCK_DGRAM
 };
 
-enum protocol_family
+enum class protocol_family
+: int
 {
-	UNIX,  // PF_UNIX
-	INET,  // PF_INET
+	UNIX = AF_UNIX,
+	INET = AF_INET
 };
 
-enum blocking_mode
+enum class blocking_mode
+: int
 {
-	BLOCKING,
-	NON_BLOCKING,
+	BLOCKING = 0,
+	NON_BLOCKING = 1
 };
 
 class Poller;
@@ -146,14 +149,7 @@ class Socket< socket_type::STREAM >
 
 	Socket( const protocol_family protocol )
 	{
-		if( protocol == protocol_family::INET )
-		{
-			socket_ = ::socket( PF_INET, SOCK_STREAM, IPPROTO_TCP );
-		}
-		else
-		{
-			socket_ = ::socket( PF_UNIX, SOCK_STREAM, IPPROTO_TCP );
-		}
+		socket_ = ::socket( static_cast<int>(protocol), SOCK_STREAM, IPPROTO_TCP );
 
 		if( socket_ < 0 )
 		{
