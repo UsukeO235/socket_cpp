@@ -164,7 +164,6 @@ class Socket< socket_type::STREAM >
 		int yes = 1;
 		if( setsockopt(socket_, SOL_SOCKET, SO_REUSEADDR, (const char*)(&yes), sizeof(yes)) < 0 )
 		{
-			close( socket_ );
 			throw SocketInitializationFailedException( "setsockopt() failed" );
 		}
 	}
@@ -223,13 +222,11 @@ class Socket< socket_type::STREAM >
 			u_long val = 1;
 			if( ioctl( socket_, FIONBIO, &val ) < 0 )
 			{
-				close( socket_ );
 				throw SocketModeChangeFailedException( "ioctl() fialed" );
 			}
 		}
 		else
 		{
-			close( socket_ );
 			throw std::runtime_error( "Not implemented" );
 		}
 
@@ -246,7 +243,6 @@ class Socket< socket_type::STREAM >
 		if( ::bind(socket_, (struct sockaddr*)(&server_socket_addr_), sizeof(server_socket_addr_) ) < 0 ) 
 		{
 			// 既に接続が確立しているポートでは bind が失敗する( Address already in use )
-			close( socket_ );
 			throw SocketBindFailedException( "bind() failed" );
 		}
 	}
@@ -255,7 +251,6 @@ class Socket< socket_type::STREAM >
 	{
 		if( ::listen(socket_, backlog) < 0 )
 		{
-			close( socket_ );
 			throw SocketListenFailedException( "listen() failed" );
 		}
 	}
@@ -291,7 +286,6 @@ class Socket< socket_type::STREAM >
 		s.socket_ = ::accept( socket_, (struct sockaddr *)&s.client_socket_addr_, &client_socket_length );
 		if( s.socket_ < 0 )
 		{
-			close( socket_ );
 			throw SocketAcceptFailedException( "accept() failed" );
 		}
 
@@ -312,7 +306,6 @@ class Socket< socket_type::STREAM >
 
 		if( inet_aton( ip_address, &server_socket_addr_.sin_addr ) == 0 )
 		{
-			close( socket_ );
 			throw SocketConnectFailedException( "Invalid IP address" );
 		}
 
@@ -320,7 +313,6 @@ class Socket< socket_type::STREAM >
 		{
 			if( mode_ == blocking_mode::BLOCKING )
 			{
-				close( socket_ );
 				throw SocketConnectFailedException( "connect() failed" );
 			}
 			return false;
@@ -330,7 +322,6 @@ class Socket< socket_type::STREAM >
 		int yes = 1;
 		if( setsockopt(socket_, SOL_SOCKET, SO_REUSEADDR, (const char*)(&yes), sizeof(yes)) < 0 )
 		{
-			close( socket_ );
 			throw SocketConnectFailedException( "setsockopt() failed" );
 		}
 
