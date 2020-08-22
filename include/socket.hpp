@@ -474,7 +474,6 @@ class Poller
 		for( unsigned int i = 0; i < max_num_of_fds_; i ++ )
 		{
 			results_[i] = fds_[i];
-			fds_[i].fd = 0;
 			fds_[i].revents = 0;
 		}
 		index_ = 0;
