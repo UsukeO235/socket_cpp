@@ -465,19 +465,13 @@ class Poller
 	bool poll( const int timeout=-1 )
 	{
 		int ret = ::poll( fds_.get(), index_, timeout );
-		/*
-		std::memset( &(results_[0]), 0, sizeof(pollfd)*max_num_of_fds_ );
-		std::memcpy( results_.get(), fds_.get(), sizeof(pollfd)*max_num_of_fds_ );
-		// ここでeventsまで初期化するとバグる
-		std::memset( &(fds_[0]), 0, sizeof(pollfd)*max_num_of_fds_ );
-		*/
+	
 		for( unsigned int i = 0; i < max_num_of_fds_; i ++ )
 		{
-			results_[i] = fds_[i];
-			fds_[i].revents = 0;
+			results_[i] = fds_[i];  // 結果を退避しておく
+			fds_[i].revents = 0;  // 受け取ったイベントのみ初期化
 		}
-		//index_ = 0;
-
+		
 		if( ret <= 0 )
 		{
 			return false;
@@ -498,7 +492,6 @@ class Poller
 			return false;
 		}
 
-		//map_.erase( itr );
 		return true;
 	}
 
