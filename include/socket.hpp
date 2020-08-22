@@ -476,7 +476,7 @@ class Poller
 			results_[i] = fds_[i];
 			fds_[i].revents = 0;
 		}
-		index_ = 0;
+		//index_ = 0;
 
 		if( ret <= 0 )
 		{
