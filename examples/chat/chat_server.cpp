@@ -59,17 +59,36 @@ int main()
 		{
 			if( poller.poll() )
 			{
-				for( auto itr = sockets.begin(); itr != sockets.end(); ++ itr )
+				auto itr = sockets.begin();
+				while( itr != sockets.end() )
 				{
 					if( poller.is_event_detected( *itr ) )
 					{
 						std::cout << "Event detected on comm socket: " << static_cast<int>(poller.event_detected(*itr)) << std::endl;
+						if( (poller.event_detected(*itr) & c_wrapper::socket::poll_event::IN) == c_wrapper::socket::poll_event::IN )
+						{
+							uint8_t buf[256];
+							int ret = (*itr).receive( buf, sizeof(buf) );
+							if( ret == 0 )
+							{
+								std::cout << "receive() returned 0" << std::endl;
+								poller.remove( *itr );
+								itr = sockets.erase( itr );
+								continue;
+							}
+							else if( ret > 0 )
+							{
+								std::cout << ret << " bytes received" << std::endl;
+							}
+						}
 					}
+
+					++ itr;
 				}
 
 				if( poller.is_event_detected( producer ) )
 				{
-					std::cout << static_cast<int>(poller.event_detected(producer)) << std::endl;
+					//std::cout << static_cast<int>(poller.event_detected(producer)) << std::endl;
 					
 					if( sockets.size() < 4 )
 					{
@@ -82,7 +101,8 @@ int main()
 						catch( const c_wrapper::socket::SocketAcceptFailedException& e )
 						{
 							std::cerr << e.what() << '\n';
-							return -1;
+							std::cout << "One of sockets might be closed" << std::endl;
+							
 						}
 					}
 				}

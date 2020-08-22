@@ -33,6 +33,9 @@ int main()
 		
 		socket.connect( "127.0.0.1", 50000 );
 
+		uint8_t buf[] = "Hi.";
+		//socket.send( buf, sizeof(buf) );
+
 		sleep(2);
 	}
 	catch( const std::exception& e )
