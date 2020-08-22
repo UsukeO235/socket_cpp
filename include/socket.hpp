@@ -212,18 +212,10 @@ class Socket< socket_type::STREAM >
 
 	void change_mode( const blocking_mode mode )
 	{
-		if( mode == blocking_mode::NON_BLOCKING )
+		u_long val = static_cast<u_long>(mode);
+		if( ioctl( socket_, FIONBIO, &val ) < 0 )
 		{
-			// ソケットをノンブロッキングモードに設定
-			u_long val = 1;
-			if( ioctl( socket_, FIONBIO, &val ) < 0 )
-			{
-				throw SocketModeChangeFailedException( "ioctl() fialed" );
-			}
-		}
-		else
-		{
-			throw std::runtime_error( "Not implemented" );
+			throw SocketModeChangeFailedException( "ioctl() fialed" );
 		}
 
 		mode_ = mode;
