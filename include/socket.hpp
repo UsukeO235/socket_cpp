@@ -463,7 +463,10 @@ class Poller
 		// fds_の中から指定されたソケットを削除し、fds_を前方に詰める
 		// (1) fds_ = {5, x, 3}, index_==3, itr->second==1
 		// (2) fds_ = {5, 3}, index_==2, itr==NULL
-		std::memmove( fds_.get(), fds_.get()+(itr->second)+1, sizeof(pollfd)*(index_-(itr->second)-1) );
+		if( index_ - itr->second > 1 )
+		{
+			std::memmove( fds_.get(), fds_.get()+(itr->second)+1, sizeof(pollfd)*(index_-(itr->second)-1) );
+		}
 		map_.erase( itr );
 		index_ --;
 	}
