@@ -36,7 +36,7 @@ int main()
 		uint8_t buf[] = "Hi.";
 		socket.send( buf, sizeof(buf) );
 
-		sleep(2);
+		sleep(5);
 	}
 	catch( const std::exception& e )
 	{

@@ -74,7 +74,6 @@ int main()
 								std::cout << "receive() returned 0" << std::endl;
 								poller.remove( *itr );
 								itr = sockets.erase( itr );
-								continue;
 							}
 							else if( ret > 0 )
 							{
