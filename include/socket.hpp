@@ -30,6 +30,7 @@ SOFTWARE.
 #include <poll.h>
 #include <unistd.h>
 #include <memory>
+#include <vector>
 #include <unordered_map>
 #include <cstring>
 #include <exception>
@@ -389,8 +390,8 @@ class Poller
 {
 	private:
 	const std::size_t max_num_of_fds_;
-	std::unique_ptr< pollfd[] > fds_;
-	std::unique_ptr< pollfd[] > results_;
+	std::vector< pollfd > fds_;
+	std::vector< pollfd > results_;
 
 	unsigned int index_ = 0;
 	std::unordered_map< int, unsigned int > map_;  // fd, index
@@ -398,11 +399,9 @@ class Poller
 	public:
 	Poller( const std::size_t N )
 	: max_num_of_fds_( N ) 
-	, fds_( new pollfd[N] )
-	, results_( new pollfd[N] )
 	{
-		std::memset( &(fds_[0]), 0, sizeof(pollfd)*N );
-		std::memset( &(results_[0]), 0, sizeof(pollfd)*N );
+		fds_.reserve( N );
+		results_.reserve( N );
 	}
 
 	void append( const Socket<socket_type::STREAM>& socket, const poll_event events )
@@ -412,11 +411,8 @@ class Poller
 			throw PollerAppendFailedException( "Could not append fd to fds" );
 		}
 
-		fds_[index_].fd = socket.get();
-		fds_[index_].events = static_cast<int>(events);
-
-		map_[socket.get()] = index_;
-		index_ ++;
+		fds_.push_back( pollfd{.fd=socket.get(), .events=static_cast<int>(events)} );
+		map_[socket.get()] = fds_.size() - 1;  // index
 	}
 
 	void append( const Socket<socket_type::DGRAM>& socket )
@@ -443,24 +439,26 @@ class Poller
 			throw PollerRemoveFailedException( "Specified socket not registered" );
 		}
 
-		// fds_の中から指定されたソケットを削除し、fds_を前方に詰める
-		// (1) fds_ = {5, x, 3}, index_==3, itr->second==1
-		// (2) fds_ = {5, 3}, index_==2, itr==NULL
-		if( index_ - itr->second > 1 )
-		{
-			std::memmove( fds_.get(), fds_.get()+(itr->second)+1, sizeof(pollfd)*(index_-(itr->second)-1) );
-		}
+		// 指定されたソケットをfds_の中から削除し、fds_を前方に詰める
+		fds_[itr->second] = fds_.back();  // 末尾の要素で削除したい要素を上書き
+		map_[fds_.back().fd] = itr->second;
+		fds_.pop_back();
 		map_.erase( itr );
-		index_ --;
 	}
 
 	bool poll( const int timeout=-1 )
 	{
-		int ret = ::poll( fds_.get(), index_, timeout );
-	
+		int ret = ::poll( fds_.data(), fds_.size(), timeout );
+		/*
 		for( unsigned int i = 0; i < max_num_of_fds_; i ++ )
 		{
 			results_[i] = fds_[i];  // 結果を退避しておく
+			fds_[i].revents = 0;  // 受け取ったイベントのみ初期化
+		}
+		*/
+		results_ = fds_;  // 結果を退避しておく
+		for( unsigned int i = 0; i < fds_.size(); i ++ )
+		{
 			fds_[i].revents = 0;  // 受け取ったイベントのみ初期化
 		}
 		
