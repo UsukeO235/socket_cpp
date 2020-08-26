@@ -74,6 +74,9 @@ int main()
 								std::cout << "receive() returned 0" << std::endl;
 								poller.remove( *itr );
 								itr = sockets.erase( itr );
+								std::cout << "Successfully erased socket" << std::endl;
+
+								continue;
 							}
 							else if( ret > 0 )
 							{
@@ -113,6 +116,10 @@ int main()
 		}
 
 		std::cout << "Aborted" << std::endl;
+	}
+	catch( const c_wrapper::socket::PollerEventDetectionFailedException& e )
+	{
+		std::cerr << "Event detection: " << e.what() << '\n';
 	}
 	catch( const std::exception& e )
 	{
