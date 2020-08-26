@@ -283,7 +283,8 @@ class Socket< socket_type::STREAM >
 		}
 
 		s.established_ = true;
-		return std::move(s);
+		//return std::move(s);
+		return s;
 	}
 
 	bool connect( const char* ip_address, const uint16_t port )
