@@ -283,7 +283,6 @@ class Socket< socket_type::STREAM >
 		}
 
 		s.established_ = true;
-		//return std::move(s);
 		return s;
 	}
 
